@@ -14,13 +14,13 @@ class wav_processor():
 		self.dataset = []
 		self.n_rows = 0
 		self.n_files = 0
-		self.fourier_cutoffs = (20, 20000)
+		self.fourier_cutoffs = (25, 4400)
 		self.time = 0.0
 
 		#io
-		self.wav_dir = 'test_wavs'
-		self.midi_dir = 'test_midi'
-		self.out_fname = 'test_dataset.csv'
+		self.wav_dir = 'audio_wav'
+		self.midi_dir = 'midi'
+		self.out_fname = 'dataset.csv'
 		self.out_dir = 'data'
 		if not os.path.exists(self.out_dir):
 			os.makedirs(self.out_dir)
@@ -31,11 +31,17 @@ class wav_processor():
 	def run(self):
 		wav_dir_list = os.listdir(self.wav_dir)
 		midi_dir_list = os.listdir(self.midi_dir)
+		wav_dir_list.sort()
+		midi_dir_list.sort()
 
 		for wav_fname, midi_fname in zip(wav_dir_list, midi_dir_list):
 			wav_full_dir = os.path.join(self.wav_dir, wav_fname)
 			midi_full_dir = os.path.join(self.midi_dir, midi_fname)
-			self.cut_wav(wav_full_dir, midi_full_dir)
+			if self.check_same_dir(wav_full_dir, midi_full_dir):
+				self.cut_wav(wav_full_dir, midi_full_dir)
+			else:
+				print('wav & midi files do not match')
+
 			self.n_files += 1
 
 		self.out_f.close()
@@ -69,7 +75,16 @@ class wav_processor():
 
 	def fourier_trans(self, wave_array):
 		fft_array = abs(np.fft.fft(wave_array))
+		#print('data length:',len(fft_array[self.fourier_cutoffs[0]: self.fourier_cutoffs[1]]))
 		return fft_array[self.fourier_cutoffs[0]: self.fourier_cutoffs[1]]
+
+	def check_same_dir(self, wav_dir, midi_dir):
+		w_ = wav_dir.split('.')[0].split('/')[1]
+		m_ = midi_dir.split('.')[0].split('/')[1]
+		same = w_ == m_
+		#print(w_, m_)
+		#print('same:', same)
+		return same
 
 
 class midi_wrapper():
