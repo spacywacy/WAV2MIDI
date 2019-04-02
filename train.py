@@ -7,6 +7,7 @@ import torch.optim as optim
 from random import random
 import matplotlib.pyplot as plt
 import nets
+from test import Test
 import pickle
 from time import time
 
@@ -23,18 +24,25 @@ class Train():
 		#net & loss
 		self.net = nets.FC_NET()
 		self.criterion = nn.MSELoss()
-		self.learning_rate = 0.000000001
+		self.learning_rate = 0.00000000001
 		self.optimizer = optim.SGD(self.net.parameters(), lr=self.learning_rate)
 
 		#training specifics
-		self.batch_size = 100 #size of a single batch
-		self.n_batch = 2 #number of batches to load from dataset
-		self.n_epoch = 2 #number of epochs
+		self.batch_size = 500 #size of a single batch
+		self.n_batch = 20 #number of batches to load from dataset
+		self.n_epoch = 5 #number of epochs
 		
 		#utilities
 		self.label_len = 88 #length of the label vector
 		self.cost_history = [] #losses over batches
-		self.cost_plot_offset = 5 #ignore cost first n number of batch during plotting
+		self.cost_plot_offset = 30 #ignore cost first n number of batch during plotting
+		
+		#validation
+		self.if_validate = True
+		self.if_train_error = False
+		self.vali_score = np.inf
+		self.vali_data_dir = 'data/dataset_validation.csv'
+
 
 	def load_batch(self):
 		i_row = 1
@@ -73,15 +81,25 @@ class Train():
 			i_batch += 1
 
 	def train_loop(self):
+		#training
 		for i_epoch in range(self.n_epoch):
 			self.single_epoch(i_epoch)
 		print('Done training')
 
+		#validation
+		if self.if_validate:
+			vali_wrapper = Test(self.vali_data_dir,
+								self.net,
+								loss=self.criterion)
+			self.vali_score = float(vali_wrapper.run_test())
+		print('Done validating')
+
+		#closing
 		self.close_train()
 		print('Dumped files')
 
 	def plot_cost(self, plt_dir=None):
-		xs = list(range(5, len(self.cost_history)))
+		xs = list(range(self.cost_plot_offset, len(self.cost_history)))
 		plt.plot(xs, self.cost_history[self.cost_plot_offset:])
 		plt.xlabel('Iterations')
 		plt.ylabel('Cost')
@@ -104,8 +122,11 @@ class Train():
 			f.write('Net name: {}\n'.format(self.net.name))
 			f.write('Loss: {}\n'.format(str(self.criterion)))
 			f.write('Learning rate: {}\n'.format(self.learning_rate))
+			f.write('Batch size: {}\n'.format(self.batch_size))
 			f.write('Total batches: {}\n'.format(self.n_batch))
 			f.write('Total epochs: {}\n'.format(self.n_epoch))
+			f.write('Validation error: {}\n'.format(self.vali_score))
+			f.write('Graph offset: {}\n'.format(self.cost_plot_offset))
 
 	def close_train(self):
 		model_name = '{}_{}'.format(self.net.name, str(int(time())))
