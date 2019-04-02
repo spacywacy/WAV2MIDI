@@ -16,16 +16,19 @@ class wav_processor():
 		self.n_files = 0
 		self.fourier_cutoffs = (25, 4400)
 		self.time = 0.0
+		self.partition = True
+		self.train_files = 46
+		self.vali_files = 2
+		self.test_files = 2
 
 		#io
 		self.wav_dir = 'audio_wav'
 		self.midi_dir = 'midi'
-		self.out_fname = 'dataset.csv'
+		self.out_fname = 'dataset'
 		self.out_dir = 'data'
 		if not os.path.exists(self.out_dir):
 			os.makedirs(self.out_dir)
-		self.out_full_dir = os.path.join(self.out_dir, self.out_fname)
-		self.out_f = open(self.out_full_dir, 'w')
+		
 
 	#loop thru wav files in a dir
 	def run(self):
@@ -33,12 +36,40 @@ class wav_processor():
 		midi_dir_list = os.listdir(self.midi_dir)
 		wav_dir_list.sort()
 		midi_dir_list.sort()
+		all_files = list(zip(wav_dir_list, midi_dir_list))
+		train_f = all_files[:self.train_files]
+		vali_f = all_files[self.train_files:self.train_files+self.vali_files]
+		test_f = all_files[self.train_files+self.vali_files:self.train_files+self.vali_files+self.test_files]
 
-		for wav_fname, midi_fname in zip(wav_dir_list, midi_dir_list):
+		#training set
+		tmp_out_fname = self.out_fname + '_train.csv'
+		tmp_out_fname = os.path.join(self.out_dir, tmp_out_fname)
+		self.out_f = open(tmp_out_fname, 'w')
+		self.go_thru_dir(train_f)
+		print('\nTraining Set Done')
+
+		#validation set
+		tmp_out_fname = self.out_fname + '_validation.csv'
+		tmp_out_fname = os.path.join(self.out_dir, tmp_out_fname)
+		self.out_f = open(tmp_out_fname, 'w')
+		self.go_thru_dir(vali_f)
+		print('\nValidation Set Done')
+
+		#test set
+		tmp_out_fname = self.out_fname + '_test.csv'
+		tmp_out_fname = os.path.join(self.out_dir, tmp_out_fname)
+		self.out_f = open(tmp_out_fname, 'w')
+		self.go_thru_dir(test_f)
+		print('\nTest Set Done')
+
+
+	def go_thru_dir(self, file_collection):
+		for wav_fname, midi_fname in file_collection:
 			wav_full_dir = os.path.join(self.wav_dir, wav_fname)
 			midi_full_dir = os.path.join(self.midi_dir, midi_fname)
 			if self.check_same_dir(wav_full_dir, midi_full_dir):
 				self.cut_wav(wav_full_dir, midi_full_dir)
+				#print(wav_full_dir)
 			else:
 				print('wav & midi files do not match')
 
@@ -47,6 +78,7 @@ class wav_processor():
 		self.out_f.close()
 		print('Total files:', self.n_files)
 		print('Total rows:', self.n_rows)
+		self.n_files = 0
 
 	#cut a wav file into pieces
 	def cut_wav(self, wav_dir, midi_dir):
@@ -131,6 +163,7 @@ class midi_wrapper():
 				self.track.append(line)
 
 			self.n_msg += 1
+		self.time = self.track[-1][0]
 
 	def track_lookup(self, t):
 		for i in range(len(self.track)):
@@ -138,8 +171,9 @@ class midi_wrapper():
 				return self.track[i-1][1]
 
 	def gen_label(self):
-		n_labels = int(self.time/self.interval) + 1
-		t = self.start_time
+		n_labels = int(self.time/self.interval)
+		#t = self.start_time
+		t = 0.0
 		for i in range(n_labels):
 			label_vec = self.track_lookup(t)
 			t += self.interval
