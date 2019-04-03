@@ -23,18 +23,18 @@ class Train():
 
 		#net & loss
 		#self.net = nets.FC_NET()
-		self.net = nets.CONV_NET_1D_0()
+		self.net = nets.CONV_NET_1D_0_SIG()
 		self.criterion = nn.MSELoss()
-		self.learning_rate = 0.000000001
-		self.optimizer = optim.SGD(self.net.parameters(), lr=self.learning_rate, momentum=0.9)
+		self.learning_rate = 0.0005
+		#self.optimizer = optim.SGD(self.net.parameters(), lr=self.learning_rate, momentum=0.9)
 		#self.optimizer = optim.RMSprop(self.net.parameters(), lr=self.learning_rate)
-		#self.optimizer = optim.Adam(self.net.parameters(), lr=self.learning_rate)
+		self.optimizer = optim.Adam(self.net.parameters(), lr=self.learning_rate)
 		self.channel_dim = True
 
 		#training specifics
-		self.batch_size = 1024 #size of a single batch
-		self.n_batch = 60 #number of batches to load from dataset
-		self.n_epoch = 8 #number of epochs
+		self.batch_size = 512 #size of a single batch
+		self.n_batch = 120 #number of batches to load from dataset
+		self.n_epoch = 5 #number of epochs
 		
 		#utilities
 		self.label_len = 88 #length of the label vector
