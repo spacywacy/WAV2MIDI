@@ -34,6 +34,7 @@ class Test():
 		#utilities
 		self.label_len = 88
 		self.n_batch = n_batch
+		self.channel_dim = True
 
 		#results
 		self.batch_losses = []
@@ -62,6 +63,9 @@ class Test():
 
 			Xs = torch.tensor([x[:-self.label_len] for x in all_data], dtype=torch.float)
 			y = torch.tensor([x[-self.label_len:] for x in all_data], dtype=torch.float)
+			if self.channel_dim:
+				Xs = Xs.view(Xs.shape[0], 1, Xs.shape[1])
+
 			output = self.net(Xs)
 			self.loss = self.criterion(output, y)
 			print('{} on all data: {}'.format(str(self.criterion), str(self.loss)))
@@ -74,6 +78,9 @@ class Test():
 
 			Xs = torch.tensor([x[:-self.label_len] for x in batch], dtype=torch.float)
 			y = torch.tensor([x[-self.label_len:] for x in batch], dtype=torch.float)
+			if self.channel_dim:
+				Xs = Xs.view(Xs.shape[0], 1, Xs.shape[1])
+			
 			output = self.net(Xs)
 			self.batch_losses.append(self.criterion(output, y))
 			i_batch += 1

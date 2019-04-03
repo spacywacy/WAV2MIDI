@@ -22,20 +22,25 @@ class Train():
 			os.makedirs(self.model_bin)
 
 		#net & loss
-		self.net = nets.FC_NET()
+		#self.net = nets.FC_NET()
+		self.net = nets.CONV_NET_1D_0()
 		self.criterion = nn.MSELoss()
-		self.learning_rate = 0.00000000001
-		self.optimizer = optim.SGD(self.net.parameters(), lr=self.learning_rate)
+		self.learning_rate = 0.000000001
+		self.optimizer = optim.SGD(self.net.parameters(), lr=self.learning_rate, momentum=0.9)
+		#self.optimizer = optim.RMSprop(self.net.parameters(), lr=self.learning_rate)
+		#self.optimizer = optim.Adam(self.net.parameters(), lr=self.learning_rate)
+		self.channel_dim = True
 
 		#training specifics
-		self.batch_size = 500 #size of a single batch
-		self.n_batch = 20 #number of batches to load from dataset
-		self.n_epoch = 5 #number of epochs
+		self.batch_size = 1024 #size of a single batch
+		self.n_batch = 60 #number of batches to load from dataset
+		self.n_epoch = 8 #number of epochs
 		
 		#utilities
 		self.label_len = 88 #length of the label vector
 		self.cost_history = [] #losses over batches
 		self.cost_plot_offset = 30 #ignore cost first n number of batch during plotting
+		self.n_rows_used = 0 #number of rows from the training set
 		
 		#validation
 		self.if_validate = True
@@ -62,6 +67,8 @@ class Train():
 				batch.append(data_row)
 				i_row += 1
 
+		return i_row
+
 	def single_epoch(self, i_epoch=0):
 		i_batch = 0
 		for batch in self.load_batch():
@@ -70,11 +77,14 @@ class Train():
 
 			Xs = torch.tensor([x[:-self.label_len] for x in batch], dtype=torch.float)
 			y = torch.tensor([x[-self.label_len:] for x in batch], dtype=torch.float)
+
+			if self.channel_dim:
+				Xs = Xs.view(Xs.shape[0], 1, Xs.shape[1])
 			
 			self.optimizer.zero_grad()
 			output = self.net(Xs)
 			loss = self.criterion(output, y)
-			self.cost_history.append(loss)
+			self.cost_history.append(float(loss))
 			print('epoch: {}, batch: {}, loss: {}'.format(str(i_epoch), str(i_batch), str(float(loss.data))))
 			loss.backward()
 			self.optimizer.step()
@@ -83,7 +93,9 @@ class Train():
 	def train_loop(self):
 		#training
 		for i_epoch in range(self.n_epoch):
-			self.single_epoch(i_epoch)
+			n_rows = self.single_epoch(i_epoch)
+			if i_epoch == 0:
+				self.n_rows_used = n_rows
 		print('Done training')
 
 		#validation
@@ -127,6 +139,7 @@ class Train():
 			f.write('Total epochs: {}\n'.format(self.n_epoch))
 			f.write('Validation error: {}\n'.format(self.vali_score))
 			f.write('Graph offset: {}\n'.format(self.cost_plot_offset))
+			f.write('Total rows of data used: {}\n'.format(self.n_rows_used))
 
 	def close_train(self):
 		model_name = '{}_{}'.format(self.net.name, str(int(time())))
