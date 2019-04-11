@@ -35,6 +35,7 @@ class Test():
 		self.label_len = 88
 		self.n_batch = n_batch
 		self.channel_dim = True
+		self.batch_size = 100
 
 		#results
 		self.batch_losses = []
@@ -62,7 +63,7 @@ class Test():
 				all_data.append(data_row)
 
 			Xs = torch.tensor([x[:-self.label_len] for x in all_data], dtype=torch.float)
-			y = torch.tensor([x[-self.label_len:] for x in all_data], dtype=torch.float)
+			y = torch.tensor([x[-self.label_len:] for x in all_data], dtype=torch.long)
 			if self.channel_dim:
 				Xs = Xs.view(Xs.shape[0], 1, Xs.shape[1])
 
@@ -77,10 +78,10 @@ class Test():
 				break
 
 			Xs = torch.tensor([x[:-self.label_len] for x in batch], dtype=torch.float)
-			y = torch.tensor([x[-self.label_len:] for x in batch], dtype=torch.float)
+			y = torch.tensor([x[-self.label_len:] for x in batch], dtype=torch.long)
 			if self.channel_dim:
 				Xs = Xs.view(Xs.shape[0], 1, Xs.shape[1])
-			
+
 			output = self.net(Xs)
 			self.batch_losses.append(self.criterion(output, y))
 			i_batch += 1
@@ -106,13 +107,39 @@ class Test():
 				batch.append(data_row)
 				i_row += 1
 
+	def error_analysis(self):
+		i_row = 0
+
+		with open(self.data_dir, 'r') as f:
+			for line in f:
+				if i_row >= self.n_batch:
+					break
+
+				print('\nrow: {}'.format(i_row))
+				try:
+					data_row = [float(x) for x in line[:-1].split(',')]
+				except Exception as e:
+					print('Error when appending row({}): {}'.format(str(i_row), str(e)))
+
+				Xs = torch.tensor([data_row[:-self.label_len]], dtype=torch.float)
+				y = torch.tensor([data_row[-self.label_len:]], dtype=torch.long)
+				if self.channel_dim:
+					Xs = Xs.view(Xs.shape[0], 1, Xs.shape[1])
+
+				y_hat_vec = self.net(Xs)
+				notes = list(range(1,89))
+				for note, y, y_hat in zip(notes, list(y.numpy()[0]), list(y_hat_vec.detach().numpy()[0])):
+					print('Note: {}, Real: {}, Hat: {}'.format(note, y, y_hat))
+
+				i_row += 1
+
 
 
 def test_Test():
 	data_dir = 'data/dataset_validation.csv'
-	model = 'simply_fc_1554228850.pickle'
-	test_obj = Test(data_dir, model)
-	test_obj.run_test()
+	model = 'conv_net_1d_3_sig_1554422084.pickle'
+	test_obj = Test(data_dir, model, n_batch=100)
+	test_obj.error_analysis()
 
 
 if __name__ == '__main__':

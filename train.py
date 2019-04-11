@@ -11,6 +11,13 @@ from test import Test
 import pickle
 from time import time
 
+def cross_dot(output, target):
+	target_ = target.type(torch.float)
+	dot_pos = torch.sum(output * target_, dim=1)
+	mean_pos = torch.mean(dot_pos**2)
+	dot_neg = torch.sum(output * (1-target_), dim=1)
+	mean_neg = torch.mean(dot_neg**2)
+	return - mean_pos + mean_neg
 
 class Train():
 
@@ -22,10 +29,9 @@ class Train():
 			os.makedirs(self.model_bin)
 
 		#net & loss
-		#self.net = nets.FC_NET()
-		self.net = nets.CONV_NET_1D_0_SIG()
-		self.criterion = nn.MSELoss()
-		self.learning_rate = 0.0005
+		self.net = nets.CONV_NET_1D_3_SIG()
+		self.criterion = cross_dot
+		self.learning_rate = 0.0001
 		#self.optimizer = optim.SGD(self.net.parameters(), lr=self.learning_rate, momentum=0.9)
 		#self.optimizer = optim.RMSprop(self.net.parameters(), lr=self.learning_rate)
 		self.optimizer = optim.Adam(self.net.parameters(), lr=self.learning_rate)
@@ -34,7 +40,7 @@ class Train():
 		#training specifics
 		self.batch_size = 512 #size of a single batch
 		self.n_batch = 120 #number of batches to load from dataset
-		self.n_epoch = 5 #number of epochs
+		self.n_epoch = 2 #number of epochs
 		
 		#utilities
 		self.label_len = 88 #length of the label vector
@@ -76,7 +82,7 @@ class Train():
 				break
 
 			Xs = torch.tensor([x[:-self.label_len] for x in batch], dtype=torch.float)
-			y = torch.tensor([x[-self.label_len:] for x in batch], dtype=torch.float)
+			y = torch.tensor([x[-self.label_len:] for x in batch], dtype=torch.long)
 
 			if self.channel_dim:
 				Xs = Xs.view(Xs.shape[0], 1, Xs.shape[1])
