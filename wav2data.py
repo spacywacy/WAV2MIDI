@@ -2,6 +2,7 @@ import os
 from scipy.io import wavfile
 import numpy as np
 import mido
+from random import shuffle
 
 
 
@@ -11,10 +12,12 @@ class wav_processor():
 		#parameters
 		self.interval = 0.2 #cut interval, in seconds
 		self.write_to_file = True
+		self.scramble = True
 		self.dataset = []
 		self.n_rows = 0
 		self.n_files = 0
 		self.fourier_cutoffs = (25, 4400)
+		#self.fourier_cutoffs = (0, 500)
 		self.time = 0.0
 		self.partition = True
 		self.train_files = 46
@@ -24,7 +27,7 @@ class wav_processor():
 		#io
 		self.wav_dir = 'audio_wav'
 		self.midi_dir = 'midi'
-		self.out_fname = 'dataset'
+		self.out_fname = 'dataset_shuffle'
 		self.out_dir = 'data'
 		if not os.path.exists(self.out_dir):
 			os.makedirs(self.out_dir)
@@ -97,12 +100,27 @@ class wav_processor():
 			data_row = np.append(cut_fft, label)
 
 			if self.write_to_file:
-				line = ','.join([str(x) for x in list(data_row)]) + '\n'
-				self.out_f.write(line)
+				if self.scramble:
+					self.dataset.append(list(data_row))
+				else:
+					line = ','.join([str(x) for x in list(data_row)]) + '\n'
+					self.out_f.write(line)
 			else:
 				self.dataset.append(list(data_row))
 
 			self.n_rows += 1
+
+		if self.scramble:
+			shuffle(self.dataset)
+
+		if self.write_to_file:
+			self.batch2file()
+			self.dataset = []
+		
+	def batch2file(self):
+		for data_row in self.dataset:
+			line = ','.join([str(x) for x in list(data_row)]) + '\n'
+			self.out_f.write(line)
 
 
 	def fourier_trans(self, wave_array):
